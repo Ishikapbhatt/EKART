@@ -1,41 +1,78 @@
 pipeline {
-  agent any
-  tools {
-        maven "Maven 3.8.6" 
-   }
+    agent any
 
-  stages {
-      stage('Build Artifact') {
+    tools {
+        maven 'maven'  // Name of Maven tool in Jenkins
+        jdk 'jdk17'    // Name of JDK tool in Jenkins
+    }
+
+    environment {
+        SCANNER_HOME = tool 'sonar'  // SonarQube scanner
+    }
+
+    stages {
+        stage('Git Checkout') {
             steps {
-              sh "mvn clean package -DskipTests=true"
-              archive 'target/*.jar' 
-            }  
-       }
-      stage('Test Maven - JUnit') {
-            steps {
-              sh "mvn test"
-            }
-            post{
-              always{
-                junit 'target/surefire-reports/*.xml'
-              }
+                git branch: 'main', url: 'https://github.com/Ishikapbhatt/EKART.git'
             }
         }
-        
 
-      stage('Sonarqube Analysis - SAST') {
+        stage('Compile') {
             steps {
-                  withSonarQubeEnv('SonarQube') {
-           sh "mvn sonar:sonar \
-                              -Dsonar.projectKey=maven-jenkins-pipeline \
-                        -Dsonar.host.url=http://34.173.74.192:9000" 
+                sh "mvn compile"
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh "mvn test -DskipTests"
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh """
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectKey=EKART \
+                        -Dsonar.projectName=EKART \
+                        -Dsonar.java.binaries=.
+                    """
                 }
-           timeout(time: 2, unit: 'MINUTES') {
-                      script {
-                        waitForQualityGate abortPipeline: true
+            }
+        }
+
+        stage('Deploy to Nexus') {
+            steps {
+                // Use Jenkins credentials
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-creds', 
+                    usernameVariable: 'NEXUS_USER', 
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    // Use Managed Maven settings file
+                    configFileProvider([configFile(
+                        fileId: 'maven-settings',  // ID of Maven settings.xml in Jenkins
+                        variable: 'MAVEN_SETTINGS'
+                    )]) {
+                        sh """
+                            mvn clean deploy -DskipTests -s $MAVEN_SETTINGS
+                        """
                     }
                 }
-              }
+            }
         }
-     }
+    }
+
+    post {
+        always {
+            echo "Pipeline finished!"
+        }
+        success {
+            echo "Pipeline succeeded!"
+        }
+        failure {
+            echo "Pipeline failed. Check logs!"
+        }
+    }
 }
