@@ -42,25 +42,7 @@ pipeline {
             }
         }
 
-        stage('Deploy to Nexus') {
-            steps {
-                // Use Jenkins credentials
-                withCredentials([usernamePassword(
-                    credentialsId: 'nexus-creds', 
-                    usernameVariable: 'NEXUS_USER', 
-                    passwordVariable: 'NEXUS_PASS'
-                )]) {
-                    // Use Managed Maven settings file
-                    configFileProvider([configFile(
-                        fileId: 'maven-settings',  // ID of Maven settings.xml in Jenkins
-                        variable: 'MAVEN_SETTINGS'
-                    )]) {
-                        sh """
-                            mvn clean deploy -DskipTests -s $MAVEN_SETTINGS
-                        """
-                    }
-                }
-            }
+        
         }
     }
 
