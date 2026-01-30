@@ -2,15 +2,16 @@ pipeline {
     agent any
 
     tools {
-        maven 'maven'  // Name of Maven tool in Jenkins
-        jdk 'jdk17'    // Name of JDK tool in Jenkins
+        maven 'maven'   // Name of Maven tool in Jenkins
+        jdk 'jdk17'     // Name of JDK tool in Jenkins
     }
 
     environment {
-        SCANNER_HOME = tool 'sonar'  // SonarQube scanner
+        SCANNER_HOME = tool 'sonar'   // SonarQube scanner
     }
 
     stages {
+
         stage('Git Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/Ishikapbhatt/EKART.git'
@@ -19,13 +20,13 @@ pipeline {
 
         stage('Compile') {
             steps {
-                sh "mvn compile"
+                sh 'mvn compile'
             }
         }
 
         stage('Unit Test') {
             steps {
-                sh "mvn test -DskipTests"
+                sh 'mvn test'
             }
         }
 
@@ -33,16 +34,13 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar') {
                     sh """
-                        $SCANNER_HOME/bin/sonar-scanner \
+                        ${SCANNER_HOME}/bin/sonar-scanner \
                         -Dsonar.projectKey=EKART \
                         -Dsonar.projectName=EKART \
-                        -Dsonar.java.binaries=.
+                        -Dsonar.java.binaries=target
                     """
                 }
             }
-        }
-
-        
         }
     }
 
